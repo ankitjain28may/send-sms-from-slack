@@ -9,3 +9,10 @@ script:
 - composer install --dev --ignore-platform-reqs
 - php artisan key:generate
 - php artisan storage:link
+deploy:
+  provider: heroku
+  api_key:
+    secure: VvRsNKG1PPXhlsInwaJTY/eKI9ctOIyXsYm+oNOnL2pcmz9UPh7BqP/dTlpiiSya95vxfXVPoY/L5SjvI0HF20vCnCzqT30m2LZwfaD8baTSPUIwyFha69LFUuO8Z0P13BjGXhGVZL6pDnuDuVALUnXfSyLhcsnB0FJYLd8IsC6KVRiWiFapi+1t2yKr+ePF1tQFYjajMkovc4T2dvN2yWrMNhvgXihYv5LoM5JxLfnbw6gqICfld36VkrmIeHOg7qZ3a5PjWH/Da/bHlq5uK4Bcgdu3+l7b+ZQjcmkaE4Ak+OutA1C11s/zPg2cUu+mxbyF04OoJo9hX9Og7FCf1AgeZjzsAdNJ3UvUUY3owE0cyv2bHN53yi69Y/HG9KlNYlO75CNyX7jVNggDOFHOIG7N8LP/M+wRm+dqK7IFJtq5G6fPBRLznnvisq6Y+ak3mzFo6kuLZRprRw8ONqykBuphyvyP3cg7nwgcCazZgiucyxMBXi1XlZU+9DAbmrV5iyrnHuFHn4yqndGxafYakgVbjavgLv/wK9sAmzn19HmiTWXqTPqVYKeop+uZSx7xxQJmbhwPVEXcDbDZhbD6M12jdl9NLZBfQe6MJoEg6ccBID2CqaFYsVwOruerjcIXkEHjJ1/7rOoeKq2RZO6e0DKlfnzBSCqAZeixjYWrzUA=
+  app: slack-outgoing-webhook
+  on:
+    repo: ankitjain28may/send-sms-from-slack
