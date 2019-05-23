@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
 use Twilio\Rest\Client as TwilioClient;
+use Twilio\Exceptions\RestException;
 
 class IncomingController extends Controller
 {
@@ -17,14 +18,42 @@ class IncomingController extends Controller
      */
     public function index(Request $request)
     {
-        $accountSid = config('app.twilio')['TWILIO_ACCOUNT_SID'];
-        $authToken  = config('app.twilio')['TWILIO_AUTH_TOKEN'];
-        $from  = config('app.twilio')['TWILIO_SMS_NUMBER'];
+
 
         $input = $request->all();
 
         preg_match("/<@(\w+)>/", $input['text'], $user);
 
+        if (!count($user)) {
+            return response(null, 200);
+        }
+
+        $data = $this->computeSlackUserInfo($user);
+
+        if (!$data['status'] || !$data['data']['ok']) {
+            return response()->json([
+                "text" => 'Issue with slack user profile.'
+            ]);
+        }
+        $data = $data['data'];
+
+        $message = $this->sendSMS($data, $input, $user);
+
+        if (!$message['status']) {
+            return response()->json([
+                "text" => 'Error in sending sms.'
+            ]);
+        }
+        $message = $message['data'];
+
+
+        return response()->json([
+            "text" => 'Message has been successfully sent to the user.'
+        ]);
+    }
+
+    public function computeSlackUserInfo($user)
+    {
         try {
             $client = new Client(); //GuzzleHttp\Client
             $result = $client->request('GET', 'https://slack.com/api/users.info', [
@@ -35,90 +64,32 @@ class IncomingController extends Controller
             ]);
 
             $data = json_decode($result->getBody()->getContents(), true);
-            // return $data;
+            return ['status' => true, 'data' => $data];
         } catch (GuzzleException $e) {
-            echo $e->getResponse()->getBody()->getContents();
-            echo "\n";
+            // echo $e->getResponse()->getBody()->getContents();
+            // echo "\n";
+            return ['status' => false];
         }
+        return ['status' => false];
+    }
+
+    public function sendSMS($data, $input, $user)
+    {
+        $accountSid = config('app.twilio')['TWILIO_ACCOUNT_SID'];
+        $authToken  = config('app.twilio')['TWILIO_AUTH_TOKEN'];
+        $from  = config('app.twilio')['TWILIO_SMS_NUMBER'];
+        $twilio = new TwilioClient($accountSid, $authToken);
+
         try {
-            $twilio = new TwilioClient($accountSid, $authToken);
             $message = $twilio->messages->create($data['user']['profile']['phone'], [
                 "body" => str_replace($user[1], $data['user']['name'], $input['text']),
                 "from" => $from
             ]);
-        } catch (Exception $e) {
-            echo "Error: " . $e->getMessage();
+            return ['status' => true, 'data' => $message];
+        } catch (RestException $e) {
+            // echo "Error: " . $e->getMessage();
+            return ['status' => false];
         }
-
-
-        return response()->json([
-            "text" => 'Message has been successfully sent to the user.'
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
+        return ['status' => false];
     }
 }
