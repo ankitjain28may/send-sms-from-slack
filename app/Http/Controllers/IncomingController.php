@@ -22,33 +22,42 @@ class IncomingController extends Controller
 
         $input = $request->all();
 
-        preg_match("/<@(\w+)>/", $input['text'], $user);
+        preg_match("/<@(\w+)|/", $input['text'], $user);
 
-        if (!count($user)) {
-            return response(null, 200);
+        $response = [
+            "response_type" => "in_channel"
+        ];
+        if (!count($user) || count($user) == 1) {
+
+            if ($input['text'] == "") {
+                $response['text'] = 'Looks good.. :blush:';
+            }
+            return response()->json($response);
         }
 
         $data = $this->computeSlackUserInfo($user);
 
         if (!$data['status'] || !$data['data']['ok']) {
             return response()->json([
-                "text" => 'Issue with slack user profile.'
+                "response_type" => "in_channel",
+                "text" => 'Issue with slack user profile :zipper_mouth_face:'
             ]);
         }
         $data = $data['data'];
 
         $message = $this->sendSMS($data, $input, $user);
-
         if (!$message['status']) {
             return response()->json([
-                "text" => 'Error in sending sms.'
+                "response_type" => "in_channel",
+                "text" => 'Error in sending sms :x:'
             ]);
         }
         $message = $message['data'];
 
 
         return response()->json([
-            "text" => 'Message has been successfully sent to the user.'
+            "response_type" => "in_channel",
+            "text" => 'Message has been successfully sent to the user :heavy_check_mark:'
         ]);
     }
 
@@ -79,10 +88,11 @@ class IncomingController extends Controller
         $authToken  = config('app.twilio')['TWILIO_AUTH_TOKEN'];
         $from  = config('app.twilio')['TWILIO_SMS_NUMBER'];
         $twilio = new TwilioClient($accountSid, $authToken);
-
+        $body = str_replace('<@'.$user[1].'|', '@', $input['text']);
+        $body = str_replace('@'.$data['user']['name'].'>', '@'.$data['user']['name'], $body);
         try {
             $message = $twilio->messages->create($data['user']['profile']['phone'], [
-                "body" => str_replace($user[1], $data['user']['name'], $input['text']),
+                "body" => $body,
                 "from" => $from
             ]);
             return ['status' => true, 'data' => $message];
