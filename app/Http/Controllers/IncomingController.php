@@ -18,8 +18,6 @@ class IncomingController extends Controller
      */
     public function index(Request $request)
     {
-
-
         $input = $request->all();
 
         preg_match("/<@(\w+)|/", $input['text'], $user);
@@ -84,9 +82,9 @@ class IncomingController extends Controller
 
     public function sendSMS($data, $input, $user)
     {
-        $accountSid = config('app.twilio')['TWILIO_ACCOUNT_SID'];
-        $authToken  = config('app.twilio')['TWILIO_AUTH_TOKEN'];
-        $from  = config('app.twilio')['TWILIO_SMS_NUMBER'];
+        $accountSid = env('TWILIO_ACCOUNT_SID');
+        $authToken  = env('TWILIO_AUTH_TOKEN');
+        $from  = env('TWILIO_SMS_NUMBER');
         $twilio = new TwilioClient($accountSid, $authToken);
         $body = str_replace('<@'.$user[1].'|', '@', $input['text']);
         $body = str_replace('@'.$data['user']['name'].'>', '@'.$data['user']['name'], $body);
